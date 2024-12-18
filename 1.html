@@ -1,65 +1,53 @@
-<!DOCTYPE html>
-<html>
-<head>
-<title>PDF Text Extraction</title>
-<script type="module"> import pdfjsDist from 'https://cdn.jsdelivr.net/npm/pdfjs-dist@4.9.155/+esm' </script> </head>
-<body>
+<script src="//mozilla.github.io/pdf.js/build/pdf.mjs" type="module"></script>
 
-<input type="file" id="pdfFile" accept=".pdf">
-<button onclick="extractText()">Extract Text</button>
-<div id="textContent"></div>
+<script type="module">
+  // If absolute URL from the remote server is provided, configure the CORS
+  // header on that server.
+  var url = 'https://www.epfindia.gov.in/site_docs/PDFs/Circulars/Y2023-2024/annexure-1.pdf';
 
-<script>
-    /**
- * Retrieves the text of a specif page within a PDF Document obtained through pdf.js 
- * 
- * @param {Integer} pageNum Specifies the number of the page 
- * @param {PDFDocument} PDFDocumentInstance The PDF document obtained 
- **/
-function getPageText(pageNum, PDFDocumentInstance) {
-    // Return a Promise that is solved once the text of the page is retrieven
-    return new Promise(function (resolve, reject) {
-        PDFDocumentInstance.getPage(pageNum).then(function (pdfPage) {
-            // The main trick to obtain the text of the PDF page, use the getTextContent method
-            pdfPage.getTextContent().then(function (textContent) {
-                var textItems = textContent.items;
-                var finalString = "";
+  // Loaded via <script> tag, create shortcut to access PDF.js exports.
+  var { pdfjsLib } = globalThis;
 
-                // Concatenate the string of the item to the final string
-                for (var i = 0; i < textItems.length; i++) {
-                    var item = textItems[i];
+  // The workerSrc property shall be specified.
+  pdfjsLib.GlobalWorkerOptions.workerSrc = '//mozilla.github.io/pdf.js/build/pdf.worker.mjs';
 
-                    finalString += item.str + " ";
-                }
+  // Asynchronous download of PDF
+  var loadingTask = pdfjsLib.getDocument(url);
+  loadingTask.promise.then(function(pdf) {
+    console.log('PDF loaded');
 
-                // Solve promise with the text retrieven from the page
-                resolve(finalString);
-            });
-        });
-    });
-}
-
-/**
- * Extract the test from the PDF
- */
-
-var PDF_URL  = 'https://www.epfindia.gov.in/site_docs/PDFs/Circulars/Y2023-2024/annexure-1.pdf';
-PDFJS.getDocument(PDF_URL).then(function (PDFDocumentInstance) {
-
-    var totalPages = PDFDocumentInstance.pdfInfo.numPages;
+    // Fetch the first page
     var pageNumber = 1;
+    pdf.getPage(pageNumber).then(function(page) {
+      console.log('Page loaded');
 
-    // Extract the text
-    getPageText(pageNumber , PDFDocumentInstance).then(function(textPage){
-        // Show the text of the page in the console
-        console.log(textPage);
+      var scale = 1.5;
+      var viewport = page.getViewport({scale: scale});
+
+      // Prepare canvas using PDF page dimensions
+      var canvas = document.getElementById('the-canvas');
+      var context = canvas.getContext('2d');
+      canvas.height = viewport.height;
+      canvas.width = viewport.width;
+
+      // Render PDF page into canvas context
+      var renderContext = {
+        canvasContext: context,
+        viewport: viewport
+      };
+      var renderTask = page.render(renderContext);
+      renderTask.promise.then(function () {
+        console.log('Page rendered');
+      });
     });
-
-}, function (reason) {
+  }, function (reason) {
     // PDF loading error
     console.error(reason);
-});
+  });
 </script>
 
-</body>
-</html>
+<h1>PDF.js 'Hello, world!' example</h1>
+
+<p>Please use <a href="https://mozilla.github.io/pdf.js/getting_started/#download"><i>official releases</i></a> in production environments.</p>
+
+<canvas id="the-canvas"></canvas>
